@@ -1,0 +1,1940 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MoodSense — Student Wellbeing Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Outfit:wght@500;600;700;800&display=swap"
+    rel="stylesheet">
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0
+    }
+
+    :root {
+      --bg: #0f0e1a;
+      --bg2: #1a1a2e;
+      --bg3: #16213e;
+      --card: #1e1e3f;
+      --card2: #2d2b55;
+      --card-border: rgba(255, 255, 255, .06);
+      --text: #dfe6e9;
+      --text-dim: #8a8fa8;
+      --text-bright: #ffffff;
+      --pink: #e84393;
+      --pink2: #fd79a8;
+      --coral: #ff7675;
+      --coral2: #fab1a0;
+      --purple: #6c5ce7;
+      --purple2: #a29bfe;
+      --blue: #74b9ff;
+      --blue2: #0984e3;
+      --teal: #00cec9;
+      --green: #00b894;
+      --yellow: #fdcb6e;
+      --orange: #e17055;
+      --r: 14px;
+      --r-sm: 10px;
+      --r-xs: 6px;
+      --t: all .3s cubic-bezier(.4, 0, .2, 1);
+    }
+
+    html {
+      scroll-behavior: smooth
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Inter', sans-serif;
+      min-height: 100vh;
+      overflow-x: hidden
+    }
+
+    ::-webkit-scrollbar {
+      width: 5px
+    }
+
+    ::-webkit-scrollbar-track {
+      background: var(--bg)
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: var(--purple);
+      border-radius: 3px
+    }
+
+    /* LAYOUT */
+    .app {
+      display: flex;
+      min-height: 100vh
+    }
+
+    .sidebar {
+      width: 220px;
+      background: var(--bg2);
+      border-right: 1px solid var(--card-border);
+      display: flex;
+      flex-direction: column;
+      position: fixed;
+      top: 0;
+      left: 0;
+      height: 100vh;
+      z-index: 100;
+      transition: transform .3s
+    }
+
+    .sidebar .logo {
+      padding: 20px 18px 28px;
+      font-family: 'Outfit', sans-serif;
+      font-size: 1.35rem;
+      font-weight: 700;
+      color: var(--pink);
+      display: flex;
+      align-items: center;
+      gap: 8px
+    }
+
+    .sidebar nav {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      padding: 0 8px
+    }
+
+    .sidebar nav a {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 11px 14px;
+      border-radius: var(--r-sm);
+      color: var(--text-dim);
+      text-decoration: none;
+      font-size: .85rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: var(--t);
+      border: 1px solid transparent
+    }
+
+    .sidebar nav a:hover {
+      background: rgba(255, 255, 255, .04);
+      color: var(--text)
+    }
+
+    .sidebar nav a.active {
+      background: linear-gradient(135deg, rgba(232, 67, 147, .12), rgba(108, 92, 231, .1));
+      color: var(--pink);
+      border-color: rgba(232, 67, 147, .2)
+    }
+
+    .sidebar nav a .ic {
+      font-size: 1.1rem;
+      width: 22px;
+      text-align: center
+    }
+
+    .sidebar .sb-foot {
+      padding: 14px 16px;
+      border-top: 1px solid var(--card-border)
+    }
+
+    .sidebar .u-pill {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      cursor: pointer
+    }
+
+    .sidebar .u-av {
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: .8rem;
+      color: #fff
+    }
+
+    .sidebar .u-name {
+      font-size: .82rem;
+      color: var(--text);
+      font-weight: 500
+    }
+
+    .sidebar .u-email {
+      font-size: .7rem;
+      color: var(--text-dim)
+    }
+
+    .main {
+      flex: 1;
+      margin-left: 220px;
+      padding: 0
+    }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 24px;
+      border-bottom: 1px solid var(--card-border);
+      background: rgba(15, 14, 26, .6);
+      backdrop-filter: blur(10px);
+      position: sticky;
+      top: 0;
+      z-index: 50
+    }
+
+    .topbar-left {
+      display: flex;
+      align-items: center;
+      gap: 14px
+    }
+
+    .topbar-right {
+      display: flex;
+      align-items: center;
+      gap: 14px
+    }
+
+    .ham {
+      display: none;
+      background: none;
+      border: none;
+      color: var(--text);
+      font-size: 1.3rem;
+      cursor: pointer
+    }
+
+    .top-stat {
+      font-size: .82rem;
+      color: var(--text-dim)
+    }
+
+    .top-stat b {
+      color: var(--pink)
+    }
+
+    .status-pill {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 10px;
+      border: 1px solid var(--card-border);
+      border-radius: 999px;
+      font-size: .75rem;
+      color: var(--text-dim);
+      background: var(--card)
+    }
+
+    .s-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--yellow)
+    }
+
+    .s-dot.ok {
+      background: var(--green);
+      box-shadow: 0 0 6px rgba(0, 184, 148, .5)
+    }
+
+    .s-dot.err {
+      background: var(--coral)
+    }
+
+    .content {
+      padding: 20px 24px 40px
+    }
+
+    @media(max-width:768px) {
+      .sidebar {
+        transform: translateX(-100%)
+      }
+
+      .sidebar.open {
+        transform: translateX(0)
+      }
+
+      .main {
+        margin-left: 0
+      }
+
+      .ham {
+        display: block
+      }
+
+      .content {
+        padding: 16px 12px 40px
+      }
+    }
+
+    .page {
+      display: none;
+      animation: fu .35s ease
+    }
+
+    .page.active {
+      display: block
+    }
+
+    @keyframes fu {
+      from {
+        opacity: 0;
+        transform: translateY(12px)
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0)
+      }
+    }
+
+    /* CARDS */
+    .c {
+      background: var(--card);
+      border: 1px solid var(--card-border);
+      border-radius: var(--r);
+      padding: 20px;
+      transition: var(--t)
+    }
+
+    .c:hover {
+      border-color: rgba(232, 67, 147, .15)
+    }
+
+    .c h2 {
+      font-family: 'Outfit', sans-serif;
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: var(--text-bright);
+      margin-bottom: 4px
+    }
+
+    .c .sub {
+      color: var(--text-dim);
+      font-size: .8rem;
+      margin-bottom: 14px
+    }
+
+    .grid {
+      display: grid;
+      gap: 16px
+    }
+
+    .grid-2 {
+      grid-template-columns: 1fr 1fr
+    }
+
+    .grid-3 {
+      grid-template-columns: 1fr 1fr 1fr
+    }
+
+    .grid-4 {
+      grid-template-columns: repeat(4, 1fr)
+    }
+
+    @media(max-width:900px) {
+
+      .grid-2,
+      .grid-3,
+      .grid-4 {
+        grid-template-columns: 1fr 1fr
+      }
+    }
+
+    @media(max-width:600px) {
+
+      .grid-2,
+      .grid-3,
+      .grid-4 {
+        grid-template-columns: 1fr
+      }
+    }
+
+    .mt {
+      margin-top: 16px
+    }
+
+    /* AUTH */
+    .auth-wrap {
+      position: fixed;
+      inset: 0;
+      z-index: 500;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, #0f0e1a, #1a1a2e, #16213e)
+    }
+
+    .auth-wrap::before {
+      content: '';
+      position: absolute;
+      width: 400px;
+      height: 400px;
+      background: var(--pink);
+      border-radius: 50%;
+      filter: blur(120px);
+      opacity: .15;
+      top: -10%;
+      left: -5%
+    }
+
+    .auth-wrap::after {
+      content: '';
+      position: absolute;
+      width: 350px;
+      height: 350px;
+      background: var(--purple);
+      border-radius: 50%;
+      filter: blur(120px);
+      opacity: .12;
+      bottom: -10%;
+      right: -5%
+    }
+
+    .auth-card {
+      position: relative;
+      z-index: 1;
+      width: min(400px, calc(100% - 28px));
+      background: rgba(30, 30, 63, .85);
+      backdrop-filter: blur(20px);
+      border: 1px solid var(--card-border);
+      border-radius: 18px;
+      padding: 32px 28px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, .5)
+    }
+
+    .auth-logo {
+      text-align: center;
+      margin-bottom: 22px
+    }
+
+    .auth-logo h1 {
+      font-family: 'Outfit', sans-serif;
+      font-size: 1.8rem;
+      color: var(--pink)
+    }
+
+    .auth-logo p {
+      color: var(--text-dim);
+      font-size: .85rem;
+      margin-top: 4px
+    }
+
+    .auth-tabs {
+      display: flex;
+      margin-bottom: 20px;
+      background: rgba(255, 255, 255, .03);
+      border-radius: var(--r-sm);
+      padding: 3px
+    }
+
+    .auth-tabs button {
+      flex: 1;
+      padding: 9px;
+      border: none;
+      background: transparent;
+      color: var(--text-dim);
+      font: 600 .82rem 'Inter', sans-serif;
+      border-radius: var(--r-xs);
+      cursor: pointer;
+      transition: var(--t)
+    }
+
+    .auth-tabs button.active {
+      background: var(--pink);
+      color: #fff
+    }
+
+    .field {
+      margin-bottom: 14px
+    }
+
+    .field label {
+      display: block;
+      font-size: .73rem;
+      color: var(--text-dim);
+      margin-bottom: 5px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: .5px
+    }
+
+    .field input {
+      width: 100%;
+      padding: 10px 12px;
+      background: rgba(255, 255, 255, .04);
+      border: 1px solid var(--card-border);
+      border-radius: var(--r-xs);
+      color: var(--text);
+      font: .9rem 'Inter', sans-serif;
+      outline: none;
+      transition: var(--t)
+    }
+
+    .field input:focus {
+      border-color: var(--pink);
+      box-shadow: 0 0 0 3px rgba(232, 67, 147, .12)
+    }
+
+    .btn-p {
+      width: 100%;
+      padding: 12px;
+      border: none;
+      border-radius: var(--r-sm);
+      background: linear-gradient(135deg, var(--pink), var(--purple));
+      color: #fff;
+      font: 600 .88rem 'Inter', sans-serif;
+      cursor: pointer;
+      transition: var(--t);
+      margin-top: 6px
+    }
+
+    .btn-p:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 20px rgba(232, 67, 147, .3)
+    }
+
+    .auth-err {
+      color: var(--coral);
+      font-size: .8rem;
+      margin-top: 6px;
+      min-height: 18px
+    }
+
+    /* STAT CARDS */
+    .stat-c {
+      background: var(--card);
+      border: 1px solid var(--card-border);
+      border-radius: var(--r);
+      padding: 18px;
+      text-align: center;
+      transition: var(--t);
+      position: relative;
+      overflow: hidden
+    }
+
+    .stat-c::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 3px;
+      border-radius: var(--r) var(--r) 0 0
+    }
+
+    .stat-c.pink::before {
+      background: linear-gradient(90deg, var(--pink), var(--coral))
+    }
+
+    .stat-c.purple::before {
+      background: linear-gradient(90deg, var(--purple), var(--blue))
+    }
+
+    .stat-c.teal::before {
+      background: linear-gradient(90deg, var(--teal), var(--green))
+    }
+
+    .stat-c.orange::before {
+      background: linear-gradient(90deg, var(--orange), var(--yellow))
+    }
+
+    .stat-c:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 24px rgba(0, 0, 0, .3)
+    }
+
+    .stat-ic {
+      font-size: 1.5rem;
+      margin-bottom: 4px
+    }
+
+    .stat-v {
+      font-family: 'Outfit', sans-serif;
+      font-size: 1.7rem;
+      font-weight: 800;
+      color: var(--text-bright)
+    }
+
+    .stat-l {
+      font-size: .73rem;
+      color: var(--text-dim);
+      margin-top: 2px;
+      text-transform: uppercase;
+      letter-spacing: .3px
+    }
+
+    /* PROGRESS BARS */
+    .prog {
+      margin-bottom: 12px
+    }
+
+    .prog-head {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 6px
+    }
+
+    .prog-label {
+      font-size: .8rem;
+      color: var(--text)
+    }
+
+    .prog-val {
+      font-size: .8rem;
+      font-weight: 600;
+      color: var(--text-bright)
+    }
+
+    .prog-track {
+      height: 6px;
+      background: rgba(255, 255, 255, .06);
+      border-radius: 3px;
+      overflow: hidden
+    }
+
+    .prog-fill {
+      height: 100%;
+      border-radius: 3px;
+      transition: width .8s ease
+    }
+
+    /* DONUT CHART */
+    .donut-wrap {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 20px;
+      flex-wrap: wrap
+    }
+
+    .donut {
+      position: relative;
+      width: 100px;
+      height: 100px
+    }
+
+    .donut svg {
+      transform: rotate(-90deg)
+    }
+
+    .donut-label {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center
+    }
+
+    .donut-pct {
+      font-family: 'Outfit', sans-serif;
+      font-size: 1.2rem;
+      font-weight: 700;
+      color: var(--text-bright)
+    }
+
+    .donut-name {
+      font-size: .65rem;
+      color: var(--text-dim)
+    }
+
+    /* AREA CHART (CSS) */
+    .chart-area {
+      position: relative;
+      height: 140px;
+      background: var(--card2);
+      border-radius: var(--r-sm);
+      overflow: hidden;
+      display: flex;
+      align-items: flex-end;
+      gap: 0;
+      padding: 0 2px
+    }
+
+    .chart-bar {
+      flex: 1;
+      border-radius: 3px 3px 0 0;
+      transition: height .6s ease;
+      position: relative;
+      min-width: 0
+    }
+
+    .chart-bar:hover {
+      opacity: .85
+    }
+
+    .chart-bar .tip {
+      position: absolute;
+      top: -22px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--bg);
+      color: var(--text-bright);
+      font-size: .65rem;
+      padding: 2px 6px;
+      border-radius: 4px;
+      white-space: nowrap;
+      opacity: 0;
+      transition: opacity .2s
+    }
+
+    .chart-bar:hover .tip {
+      opacity: 1
+    }
+
+    .chart-labels {
+      display: flex;
+      justify-content: space-between;
+      padding: 6px 4px 0;
+      font-size: .65rem;
+      color: var(--text-dim)
+    }
+
+    /* RING GAUGE */
+    .ring-row {
+      display: flex;
+      gap: 16px;
+      justify-content: center;
+      flex-wrap: wrap
+    }
+
+    .ring-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px
+    }
+
+    .ring {
+      position: relative;
+      width: 60px;
+      height: 60px
+    }
+
+    .ring svg {
+      transform: rotate(-90deg)
+    }
+
+    .ring-val {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Outfit', sans-serif;
+      font-size: .85rem;
+      font-weight: 700;
+      color: var(--text-bright)
+    }
+
+    .ring-name {
+      font-size: .68rem;
+      color: var(--text-dim)
+    }
+
+    /* NUM CARDS */
+    .num-row {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px
+    }
+
+    .num-c {
+      background: var(--card2);
+      border-radius: var(--r-sm);
+      padding: 14px;
+      text-align: center;
+      border-top: 3px solid
+    }
+
+    .num-v {
+      font-family: 'Outfit', sans-serif;
+      font-size: 1.3rem;
+      font-weight: 700;
+      color: var(--text-bright)
+    }
+
+    .num-l {
+      font-size: .7rem;
+      color: var(--text-dim);
+      margin-top: 2px
+    }
+
+    /* BUTTONS */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 9px 18px;
+      border: none;
+      border-radius: 999px;
+      font: 600 .8rem 'Inter', sans-serif;
+      cursor: pointer;
+      transition: var(--t)
+    }
+
+    .btn-a {
+      background: linear-gradient(135deg, var(--pink), var(--purple));
+      color: #fff
+    }
+
+    .btn-a:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 14px rgba(232, 67, 147, .25)
+    }
+
+    .btn-s {
+      background: rgba(255, 255, 255, .05);
+      color: var(--text);
+      border: 1px solid var(--card-border)
+    }
+
+    .btn-s:hover {
+      background: rgba(255, 255, 255, .08)
+    }
+
+    .btn-d {
+      background: linear-gradient(135deg, var(--coral), var(--orange));
+      color: #fff
+    }
+
+    .btn-row {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-top: 12px
+    }
+
+    .res-box {
+      border: 1px solid rgba(232, 67, 147, .12);
+      border-left: 3px solid var(--pink);
+      border-radius: var(--r-xs);
+      padding: 12px;
+      background: rgba(232, 67, 147, .03);
+      min-height: 44px;
+      font-size: .85rem;
+      line-height: 1.6;
+      margin-top: 10px
+    }
+
+    /* MOOD BUTTONS */
+    .mood-btns {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap
+    }
+
+    .mood-btn {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 5px;
+      padding: 14px 22px;
+      background: rgba(255, 255, 255, .03);
+      border: 2px solid var(--card-border);
+      border-radius: var(--r);
+      cursor: pointer;
+      transition: var(--t);
+      min-width: 100px
+    }
+
+    .mood-btn:hover {
+      transform: translateY(-2px);
+      border-color: rgba(232, 67, 147, .3)
+    }
+
+    .mood-btn.sel {
+      border-color: var(--pink);
+      background: rgba(232, 67, 147, .1);
+      box-shadow: 0 0 16px rgba(232, 67, 147, .12)
+    }
+
+    .mood-btn .me {
+      font-size: 1.8rem;
+      transition: transform .3s
+    }
+
+    .mood-btn:hover .me {
+      transform: scale(1.12)
+    }
+
+    .mood-btn .ml {
+      font-size: .78rem;
+      font-weight: 500;
+      color: var(--text-dim)
+    }
+
+    textarea.gi {
+      width: 100%;
+      min-height: 100px;
+      background: rgba(255, 255, 255, .03);
+      border: 1px solid var(--card-border);
+      border-radius: var(--r-sm);
+      padding: 12px;
+      color: var(--text);
+      font: .88rem 'Inter', sans-serif;
+      resize: vertical;
+      outline: none;
+      transition: var(--t)
+    }
+
+    textarea.gi:focus {
+      border-color: var(--pink);
+      box-shadow: 0 0 0 3px rgba(232, 67, 147, .1)
+    }
+
+    .cam-wrap {
+      border: 2px solid var(--card-border);
+      border-radius: var(--r);
+      background: rgba(0, 0, 0, .4);
+      overflow: hidden;
+      position: relative;
+      aspect-ratio: 4/3;
+      max-width: 480px;
+      transition: var(--t)
+    }
+
+    .cam-wrap.on {
+      border-color: var(--teal);
+      box-shadow: 0 0 24px rgba(0, 206, 201, .12);
+      animation: cpulse 2s infinite
+    }
+
+    @keyframes cpulse {
+
+      0%,
+      100% {
+        box-shadow: 0 0 16px rgba(0, 206, 201, .08)
+      }
+
+      50% {
+        box-shadow: 0 0 32px rgba(0, 206, 201, .18)
+      }
+    }
+
+    video {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block
+    }
+
+    .bdg {
+      position: absolute;
+      left: 8px;
+      bottom: 8px;
+      background: rgba(15, 14, 26, .85);
+      color: var(--teal);
+      border-radius: 999px;
+      padding: 5px 10px;
+      font-size: .72rem;
+      font-weight: 500;
+      backdrop-filter: blur(6px)
+    }
+
+    /* PROFILE */
+    .pf-head {
+      display: flex;
+      align-items: center;
+      gap: 18px;
+      flex-wrap: wrap
+    }
+
+    .pf-av {
+      width: 70px;
+      height: 70px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.8rem;
+      font-weight: 700;
+      color: #fff;
+      border: 3px solid var(--pink)
+    }
+
+    .pf-info h2 {
+      font-family: 'Outfit', sans-serif;
+      font-size: 1.3rem;
+      color: var(--text-bright)
+    }
+
+    .pf-info p {
+      color: var(--text-dim);
+      font-size: .82rem
+    }
+
+    .badges-g {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 10px
+    }
+
+    .badge-i {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      padding: 12px 16px;
+      background: rgba(255, 255, 255, .02);
+      border: 1px solid var(--card-border);
+      border-radius: var(--r-sm);
+      min-width: 90px;
+      transition: var(--t)
+    }
+
+    .badge-i.on {
+      border-color: rgba(0, 184, 148, .3);
+      background: rgba(0, 184, 148, .05)
+    }
+
+    .badge-i .bi {
+      font-size: 1.4rem
+    }
+
+    .badge-i .bn {
+      font-size: .7rem;
+      color: var(--text-dim);
+      text-align: center
+    }
+
+    /* SETTINGS */
+    .set-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 0;
+      border-bottom: 1px solid rgba(255, 255, 255, .03)
+    }
+
+    .set-row:last-child {
+      border-bottom: none
+    }
+
+    .set-t {
+      font-size: .88rem;
+      font-weight: 500;
+      color: var(--text)
+    }
+
+    .set-d {
+      font-size: .75rem;
+      color: var(--text-dim);
+      margin-top: 1px
+    }
+
+    .tog {
+      position: relative;
+      width: 42px;
+      height: 22px;
+      cursor: pointer
+    }
+
+    .tog input {
+      opacity: 0;
+      width: 0;
+      height: 0
+    }
+
+    .tog .sl {
+      position: absolute;
+      inset: 0;
+      background: rgba(255, 255, 255, .08);
+      border-radius: 11px;
+      transition: var(--t)
+    }
+
+    .tog .sl:before {
+      content: '';
+      position: absolute;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: #fff;
+      left: 3px;
+      top: 3px;
+      transition: var(--t)
+    }
+
+    .tog input:checked+.sl {
+      background: var(--pink)
+    }
+
+    .tog input:checked+.sl:before {
+      transform: translateX(20px)
+    }
+
+    .spinner {
+      display: inline-block;
+      width: 14px;
+      height: 14px;
+      border: 2px solid rgba(255, 255, 255, .08);
+      border-top-color: var(--pink);
+      border-radius: 50%;
+      animation: sp .5s linear infinite
+    }
+
+    @keyframes sp {
+      to {
+        transform: rotate(360deg)
+      }
+    }
+
+    .greeting h1 {
+      font-family: 'Outfit', sans-serif;
+      font-size: clamp(1.4rem, 3vw, 2rem);
+      font-weight: 700;
+      color: var(--text-bright)
+    }
+
+    .greeting p {
+      color: var(--text-dim);
+      font-size: .88rem;
+      margin-top: 3px
+    }
+
+    .greeting {
+      margin-bottom: 20px
+    }
+
+    .act-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 0;
+      border-bottom: 1px solid rgba(255, 255, 255, .03)
+    }
+
+    .act-item:last-child {
+      border: none
+    }
+
+    .act-ic {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: .9rem;
+      flex-shrink: 0
+    }
+
+    .act-txt {
+      flex: 1;
+      font-size: .82rem
+    }
+
+    .act-time {
+      font-size: .72rem;
+      color: var(--text-dim)
+    }
+
+    /* AI CHAT */
+    .chat-container {
+      display: flex;
+      flex-direction: column;
+      height: calc(100vh - 140px);
+      max-height: 700px;
+    }
+
+    .chat-messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 16px 4px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .chat-bubble {
+      max-width: 80%;
+      padding: 12px 16px;
+      border-radius: 16px;
+      font-size: .88rem;
+      line-height: 1.55;
+      animation: fu .3s ease;
+      position: relative;
+    }
+
+    .chat-bubble.user {
+      align-self: flex-end;
+      background: linear-gradient(135deg, var(--pink), var(--purple));
+      color: #fff;
+      border-bottom-right-radius: 4px;
+    }
+
+    .chat-bubble.ai {
+      align-self: flex-start;
+      background: var(--card2);
+      color: var(--text);
+      border: 1px solid var(--card-border);
+      border-bottom-left-radius: 4px;
+    }
+
+    .chat-bubble .src-tag {
+      display: inline-block;
+      font-size: .6rem;
+      padding: 1px 6px;
+      border-radius: 6px;
+      background: rgba(232, 67, 147, .15);
+      color: var(--pink2);
+      margin-top: 6px;
+      font-weight: 600;
+    }
+
+    .chat-typing {
+      align-self: flex-start;
+      display: flex;
+      gap: 4px;
+      padding: 12px 16px;
+      background: var(--card2);
+      border-radius: 16px;
+      border-bottom-left-radius: 4px;
+      border: 1px solid var(--card-border);
+    }
+
+    .chat-typing span {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--text-dim);
+      animation: bounce-dot 1.2s infinite;
+    }
+
+    .chat-typing span:nth-child(2) {
+      animation-delay: .2s
+    }
+
+    .chat-typing span:nth-child(3) {
+      animation-delay: .4s
+    }
+
+    @keyframes bounce-dot {
+
+      0%,
+      80%,
+      100% {
+        transform: translateY(0);
+        opacity: .4
+      }
+
+      40% {
+        transform: translateY(-6px);
+        opacity: 1
+      }
+    }
+
+    .chat-input-row {
+      display: flex;
+      gap: 8px;
+      padding-top: 12px;
+      border-top: 1px solid var(--card-border);
+    }
+
+    .chat-input-row input {
+      flex: 1;
+      padding: 12px 16px;
+      background: rgba(255, 255, 255, .04);
+      border: 1px solid var(--card-border);
+      border-radius: 999px;
+      color: var(--text);
+      font: .88rem 'Inter', sans-serif;
+      outline: none;
+      transition: var(--t);
+    }
+
+    .chat-input-row input:focus {
+      border-color: var(--pink);
+      box-shadow: 0 0 0 3px rgba(232, 67, 147, .12);
+    }
+
+    .chat-input-row button {
+      padding: 10px 20px;
+      border: none;
+      border-radius: 999px;
+      background: linear-gradient(135deg, var(--pink), var(--purple));
+      color: #fff;
+      font: 600 .85rem 'Inter', sans-serif;
+      cursor: pointer;
+      transition: var(--t);
+    }
+
+    .chat-input-row button:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 14px rgba(232, 67, 147, .25);
+    }
+
+    .chat-input-row button:disabled {
+      opacity: .5;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    /* AI source badges */
+    .ai-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-size: .68rem;
+      padding: 2px 8px;
+      border-radius: 6px;
+      font-weight: 600;
+      margin-left: 6px;
+    }
+
+    .ai-badge.ai-on {
+      background: rgba(0, 184, 148, .12);
+      color: var(--green);
+    }
+
+    .ai-badge.ai-off {
+      background: rgba(253, 203, 110, .12);
+      color: var(--yellow);
+    }
+  </style>
+</head>
+
+<body>
+  <!-- AUTH -->
+  <div id="authPage" class="auth-wrap">
+    <div class="auth-card">
+      <div class="auth-logo">
+        <h1>🌙 MoodSense</h1>
+        <p>Your wellbeing companion</p>
+      </div>
+      <div class="auth-tabs">
+        <button id="tabSI" class="active" onclick="showTab('si')">Sign In</button>
+        <button id="tabSU" onclick="showTab('su')">Sign Up</button>
+      </div>
+      <div id="siForm">
+        <div class="field"><label>Email</label><input type="email" id="liE" placeholder="you@example.com"></div>
+        <div class="field"><label>Password</label><input type="password" id="liP" placeholder="••••••••"></div>
+        <button class="btn-p" onclick="doSignIn()">Sign In</button>
+        <div id="liErr" class="auth-err"></div>
+      </div>
+      <div id="suForm" style="display:none">
+        <div class="field"><label>Full Name</label><input id="rN" placeholder="Alex Johnson"></div>
+        <div class="field"><label>Email</label><input type="email" id="rE" placeholder="you@example.com"></div>
+        <div class="field"><label>Password</label><input type="password" id="rP" placeholder="Min 6 chars"></div>
+        <div class="field"><label>Confirm</label><input type="password" id="rP2" placeholder="Repeat"></div>
+        <button class="btn-p" onclick="doSignUp()">Create Account</button>
+        <div id="rErr" class="auth-err"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- APP -->
+  <div id="appShell" class="app" style="display:none">
+    <aside id="sidebar" class="sidebar">
+      <div class="logo">🌙 MoodSense</div>
+      <nav>
+        <a class="active" onclick="goTo('dash')"><span class="ic">📊</span>Dashboard</a>
+        <a onclick="goTo('checkin')"><span class="ic">🎭</span>Check-In</a>
+        <a onclick="goTo('chat')"><span class="ic">💬</span>AI Chat</a>
+        <a onclick="goTo('summary')"><span class="ic">📈</span>Summary</a>
+        <a onclick="goTo('profile')"><span class="ic">👤</span>Profile</a>
+        <a onclick="goTo('settings')"><span class="ic">⚙️</span>Settings</a>
+      </nav>
+      <div class="sb-foot">
+        <div class="u-pill" onclick="goTo('profile')">
+          <div id="sbAv" class="u-av" style="background:linear-gradient(135deg,var(--pink),var(--purple))">A</div>
+          <div>
+            <div id="sbN" class="u-name">User</div>
+            <div id="sbE" class="u-email">email</div>
+          </div>
+        </div>
+      </div>
+    </aside>
+    <div class="main">
+      <div class="topbar">
+        <div class="topbar-left"><button class="ham" onclick="togSB()">☰</button><span class="top-stat">TOTAL: <b
+              id="topTotal">0</b> check-ins</span></div>
+        <div class="topbar-right">
+          <div class="status-pill" id="llmPill" title="LLM Provider Status"><span id="llmDot" class="s-dot"></span><span
+              id="llmTxt">Checking AI...</span></div>
+          <div class="status-pill"><span id="hDot" class="s-dot"></span><span id="hTxt">Checking...</span></div>
+        </div>
+      </div>
+      <div class="content">
+
+        <!-- DASHBOARD -->
+        <div id="pageDash" class="page active">
+          <div class="greeting">
+            <h1 id="greet">Good evening, Alex 👋</h1>
+            <p>Your wellbeing overview</p>
+          </div>
+          <div class="grid grid-4">
+            <div class="stat-c pink">
+              <div class="stat-ic">🎯</div>
+              <div id="sCI" class="stat-v">0</div>
+              <div class="stat-l">Today</div>
+            </div>
+            <div class="stat-c purple">
+              <div class="stat-ic">🔥</div>
+              <div id="sSt" class="stat-v">0</div>
+              <div class="stat-l">Streak</div>
+            </div>
+            <div class="stat-c teal">
+              <div class="stat-ic">💜</div>
+              <div id="sMd" class="stat-v">—</div>
+              <div class="stat-l">Mood</div>
+            </div>
+            <div class="stat-c orange">
+              <div class="stat-ic">📈</div>
+              <div id="sTr" class="stat-v">—</div>
+              <div class="stat-label">Trend</div>
+            </div>
+          </div>
+          <div class="grid grid-2 mt">
+            <div class="c">
+              <h2>📊 Mood Chart (7 Days)</h2>
+              <div class="sub">Daily emotional intensity</div>
+              <div id="moodChart" class="chart-area"></div>
+              <div id="moodLabels" class="chart-labels"></div>
+            </div>
+            <div class="c">
+              <h2>🍩 Mood Breakdown</h2>
+              <div class="sub">Distribution of emotions</div>
+              <div id="donutArea" class="donut-wrap"></div>
+            </div>
+          </div>
+          <div class="grid grid-2 mt">
+            <div class="c">
+              <h2>⚡ Quick Actions</h2>
+              <div class="grid grid-2" style="gap:8px;margin-top:8px">
+                <div class="mood-btn" style="min-width:auto" onclick="goTo('checkin')"><span class="me">😊</span><span
+                    class="ml">Check-In</span></div>
+                <div class="mood-btn" style="min-width:auto" onclick="goTo('checkin')"><span class="me">📝</span><span
+                    class="ml">Reflect</span></div>
+                <div class="mood-btn" style="min-width:auto" onclick="goTo('checkin')"><span class="me">🎬</span><span
+                    class="ml">Video</span></div>
+                <div class="mood-btn" style="min-width:auto" onclick="goTo('summary')"><span class="me">📈</span><span
+                    class="ml">Summary</span></div>
+              </div>
+            </div>
+            <div class="c">
+              <h2>🕒 Recent Activity</h2>
+              <div id="actFeed">
+                <div class="act-item">
+                  <div class="act-txt" style="color:var(--text-dim)">No activity yet</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- CHECK-IN -->
+        <div id="pageCheckin" class="page">
+          <div class="greeting">
+            <h1>How are you feeling? 🎭</h1>
+            <p>Take a moment to check in.</p>
+          </div>
+          <div class="c">
+            <h2>1. Quick Check-In</h2>
+            <div class="sub">Choose what feels closest.</div>
+            <div class="mood-btns">
+              <div class="mood-btn" onclick="qC('good',this)"><span class="me">😊</span><span class="ml">Good</span>
+              </div>
+              <div class="mood-btn" onclick="qC('okay',this)"><span class="me">😐</span><span class="ml">Okay</span>
+              </div>
+              <div class="mood-btn" onclick="qC('not_great',this)"><span class="me">😔</span><span class="ml">Not
+                  Great</span></div>
+            </div>
+            <div id="qRes" class="res-box">No check-in yet.</div>
+          </div>
+          <div class="c mt">
+            <h2>2. Reflection ✍️</h2>
+            <div class="sub">Share about your day.</div>
+            <textarea id="textInput" class="gi" placeholder="Write anything..."></textarea>
+            <div class="btn-row"><button class="btn btn-a" onclick="saveRef()">💾 Save</button><button class="btn btn-s"
+                onclick="skipRef()">Skip</button></div>
+            <div id="tRes" class="res-box">Optional — skip anytime.</div>
+          </div>
+          <div class="c mt">
+            <h2>3. Video Check 🎬</h2>
+            <div class="sub">Camera check. No extra window.</div>
+            <div id="camW" class="cam-wrap"><video id="cam" autoplay muted playsinline></video>
+              <div id="camB" class="bdg">📷 Idle</div>
+            </div>
+            <canvas id="camC" width="320" height="240" style="display:none"></canvas>
+            <div class="btn-row"><button class="btn btn-a" onclick="startV()">▶ Start</button><button class="btn btn-d"
+                onclick="stopV()">⏹ Stop</button><button class="btn btn-s" onclick="skipV()">Skip</button></div>
+            <div id="vRes" class="res-box">No video check yet.</div>
+          </div>
+          <div class="c mt">
+            <h2>4. Support 💬</h2>
+            <div class="sub">Gentle response based on check-ins.</div>
+            <div class="btn-row"><button class="btn btn-a" onclick="getSupport()">✨ Get Support</button></div>
+            <div id="fRes" class="res-box">No support yet.</div>
+          </div>
+          <div class="c mt">
+            <h2>5. Weekly 📈</h2>
+            <div class="sub">Soft summary.</div>
+            <div class="btn-row"><button class="btn btn-a" onclick="getWeekly()">📋 Summary</button></div>
+            <div id="wRes" class="res-box">No summary yet.</div>
+          </div>
+        </div>
+
+        <!-- AI CHAT -->
+        <div id="pageChat" class="page">
+          <div class="greeting">
+            <h1>AI Chat Companion 💬</h1>
+            <p>Talk to MoodSense — your supportive wellbeing companion</p>
+          </div>
+          <div class="c">
+            <div class="chat-container">
+              <div id="chatMessages" class="chat-messages">
+                <div class="chat-bubble ai">Hi there! 👋 I'm MoodSense, your wellbeing companion. How are you feeling
+                  today? Feel free to share anything on your mind.<div class="src-tag">✨ MoodSense</div>
+                </div>
+              </div>
+              <div class="chat-input-row">
+                <input type="text" id="chatInput" placeholder="Type your message..."
+                  onkeydown="if(event.key==='Enter')sendChat()">
+                <button id="chatSendBtn" onclick="sendChat()">Send ✨</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- SUMMARY CHARTS -->
+        <div id="pageSummary" class="page">
+          <div class="greeting">
+            <h1>Summary & Analytics 📈</h1>
+            <p>Deep dive into your emotional patterns</p>
+          </div>
+          <div class="grid grid-3">
+            <div class="stat-c pink">
+              <div class="stat-v" id="smTotal">0</div>
+              <div class="stat-l">Total Check-Ins</div>
+            </div>
+            <div class="stat-c purple">
+              <div class="stat-v" id="smAvg">—</div>
+              <div class="stat-l">Top Mood</div>
+            </div>
+            <div class="stat-c teal">
+              <div class="stat-v" id="smStrk">0</div>
+              <div class="stat-l">Best Streak</div>
+            </div>
+          </div>
+          <div class="grid grid-2 mt">
+            <div class="c">
+              <h2>📊 Mood Intensity (14 Days)</h2>
+              <div class="sub">Bar chart of daily activity</div>
+              <div id="sumChart" class="chart-area" style="height:160px"></div>
+              <div id="sumLabels" class="chart-labels"></div>
+            </div>
+            <div class="c">
+              <h2>🎯 Mood Rings</h2>
+              <div class="sub">Percentage by emotion</div>
+              <div id="ringArea" class="ring-row"></div>
+            </div>
+          </div>
+          <div class="grid grid-2 mt">
+            <div class="c">
+              <h2>📉 Progress Bars</h2>
+              <div class="sub">Mood frequency breakdown</div>
+              <div id="progBars"></div>
+            </div>
+            <div class="c">
+              <h2>🔢 Key Numbers</h2>
+              <div class="sub">Your stats at a glance</div>
+              <div id="numCards" class="num-row"></div>
+            </div>
+          </div>
+          <div class="c mt">
+            <h2>🍩 Full Breakdown</h2>
+            <div class="sub">All emotions visualized</div>
+            <div id="fullDonut" class="donut-wrap"></div>
+          </div>
+        </div>
+
+        <!-- PROFILE -->
+        <div id="pageProfile" class="page">
+          <div class="greeting">
+            <h1>Profile 👤</h1>
+            <p>Your wellbeing journey</p>
+          </div>
+          <div class="c">
+            <div class="pf-head">
+              <div id="pfAv" class="pf-av" style="background:linear-gradient(135deg,var(--pink),var(--purple))">A</div>
+              <div class="pf-info">
+                <h2 id="pfN">Name</h2>
+                <p id="pfEm">email</p>
+                <p id="pfSince" style="color:var(--text-dim);font-size:.75rem;margin-top:2px">Member since —</p>
+              </div>
+            </div>
+          </div>
+          <div class="c mt">
+            <h2>📊 Distribution</h2>
+            <div id="pfBars"></div>
+          </div>
+          <div class="c mt">
+            <h2>🏆 Badges</h2>
+            <div id="pfBadges" class="badges-g"></div>
+          </div>
+          <div class="grid grid-3 mt">
+            <div class="stat-c pink">
+              <div id="pfTC" class="stat-v">0</div>
+              <div class="stat-l">Check-Ins</div>
+            </div>
+            <div class="stat-c purple">
+              <div id="pfSK" class="stat-v">0</div>
+              <div class="stat-l">Streak</div>
+            </div>
+            <div class="stat-c teal">
+              <div id="pfTM" class="stat-v">—</div>
+              <div class="stat-l">Top Mood</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- SETTINGS -->
+        <div id="pageSettings" class="page">
+          <div class="greeting">
+            <h1>Settings ⚙️</h1>
+            <p>Customize MoodSense</p>
+          </div>
+          <div class="c">
+            <h2>🎨 Appearance</h2>
+            <div class="set-row">
+              <div>
+                <div class="set-t">Dark Mode</div>
+                <div class="set-d">Cosmic dark theme</div>
+              </div><label class="tog"><input type="checkbox" checked disabled><span class="sl"></span></label>
+            </div>
+          </div>
+          <div class="c mt">
+            <h2>🔔 Notifications</h2>
+            <div class="set-row">
+              <div>
+                <div class="set-t">Daily Reminder</div>
+                <div class="set-d">Check-in reminder</div>
+              </div><label class="tog"><input type="checkbox"><span class="sl"></span></label>
+            </div>
+            <div class="set-row">
+              <div>
+                <div class="set-t">Weekly Summary</div>
+                <div class="set-d">Weekly mood report</div>
+              </div><label class="tog"><input type="checkbox" checked><span class="sl"></span></label>
+            </div>
+          </div>
+          <div class="c mt">
+            <h2>🔒 Privacy</h2>
+            <div class="set-row">
+              <div>
+                <div class="set-t">Camera</div>
+                <div class="set-d">Used only during video check</div>
+              </div><span style="color:var(--green);font-size:.8rem">Browser managed</span>
+            </div>
+            <div
+              style="margin-top:14px;padding:12px;background:rgba(255,255,255,.02);border-radius:var(--r-xs);border:1px solid var(--card-border);color:var(--text-dim);font-size:.8rem;line-height:1.5">
+              Your data stays in your browser. Server data provides supportive feedback only.</div>
+          </div>
+          <div class="c mt">
+            <h2>ℹ️ About</h2>
+            <div class="set-row">
+              <div>
+                <div class="set-t">MoodSense</div>
+                <div class="set-d">v2.0 — Student Wellbeing</div>
+              </div>
+            </div>
+          </div>
+          <div class="mt"><button class="btn btn-d" onclick="doLogout()"
+              style="width:100%;padding:13px;border-radius:var(--r-sm);font-size:.88rem">🚪 Sign Out</button></div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let mediaStream = null, inferTimer = null, visualSamples = [], curPage = 'dash', llmOnline = false;
+    const MC = { happy: '#00b894', neutral: '#6c5ce7', sad: '#74b9ff', angry: '#ff7675', fear: '#fdcb6e', surprise: '#00cec9', contempt: '#a29bfe', disgust: '#e17055', anxious: '#fab1a0', good: '#00b894', okay: '#6c5ce7', not_great: '#e84393' };
+    const ME = { happy: '😊', neutral: '😐', sad: '😔', angry: '😠', fear: '😨', surprise: '😲', contempt: '😒', disgust: '🤢', anxious: '😰', good: '😊', okay: '😐', not_great: '😔' };
+    const PAGES = ['dash', 'checkin', 'chat', 'summary', 'profile', 'settings'];
+
+    // AUTH
+    function showTab(t) { document.getElementById('siForm').style.display = t === 'si' ? 'block' : 'none'; document.getElementById('suForm').style.display = t === 'su' ? 'block' : 'none'; document.getElementById('tabSI').classList.toggle('active', t === 'si'); document.getElementById('tabSU').classList.toggle('active', t === 'su') }
+    function doSignUp() { const n = document.getElementById('rN').value.trim(), e = document.getElementById('rE').value.trim(), p = document.getElementById('rP').value, p2 = document.getElementById('rP2').value, err = document.getElementById('rErr'); if (!n || !e || !p) { err.textContent = 'Fill all fields.'; return } if (p.length < 6) { err.textContent = 'Min 6 chars.'; return } if (p !== p2) { err.textContent = 'Passwords don\'t match.'; return } localStorage.setItem('ms_u', JSON.stringify({ name: n, email: e, pw: btoa(p), created: new Date().toISOString(), hue: Math.floor(Math.random() * 360) })); localStorage.setItem('ms_ck', '[]'); err.textContent = ''; enter() }
+    function doSignIn() { const e = document.getElementById('liE').value.trim(), p = document.getElementById('liP').value, err = document.getElementById('liErr'), u = JSON.parse(localStorage.getItem('ms_u') || 'null'); if (!u) { err.textContent = 'No account. Sign up first.'; return } if (u.email !== e || atob(u.pw) !== p) { err.textContent = 'Invalid credentials.'; return } err.textContent = ''; enter() }
+    function doLogout() { document.getElementById('appShell').style.display = 'none'; document.getElementById('authPage').style.display = 'flex'; showTab('si') }
+    function enter() { document.getElementById('authPage').style.display = 'none'; document.getElementById('appShell').style.display = 'flex'; updUI(); updDash(); goTo('dash') }
+    function updUI() {
+      const u = JSON.parse(localStorage.getItem('ms_u') || '{}'), ini = (u.name || 'U')[0].toUpperCase(), h = u.hue || 280, g = `linear-gradient(135deg,hsl(${h},70%,50%),hsl(${(h + 50) % 360},70%,50%))`;
+      ['sbAv', 'pfAv'].forEach(id => { const el = document.getElementById(id); el.textContent = ini; el.style.background = g });
+      document.getElementById('sbN').textContent = u.name || 'User'; document.getElementById('sbE').textContent = u.email || '';
+      document.getElementById('pfN').textContent = u.name || 'User'; document.getElementById('pfEm').textContent = u.email || '';
+      const cr = u.created ? new Date(u.created).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : '—';
+      document.getElementById('pfSince').textContent = 'Since ' + cr;
+      const hr = new Date().getHours(), gr = hr < 12 ? 'Good morning' : hr < 17 ? 'Good afternoon' : 'Good evening';
+      document.getElementById('greet').textContent = `${gr}, ${(u.name || 'User').split(' ')[0]} 👋`;
+      document.getElementById('topTotal').textContent = getCK().length;
+    }
+
+    // NAV
+    function goTo(p) {
+      curPage = p; document.querySelectorAll('.page').forEach(x => x.classList.remove('active'));
+      const el = document.getElementById('page' + p.charAt(0).toUpperCase() + p.slice(1)); if (el) el.classList.add('active');
+      document.querySelectorAll('.sidebar nav a').forEach((a, i) => a.classList.toggle('active', PAGES[i] === p));
+      if (p === 'dash') updDash(); if (p === 'summary') updSummary(); if (p === 'profile') updProfile();
+      document.getElementById('sidebar').classList.remove('open');
+    }
+    function togSB() { document.getElementById('sidebar').classList.toggle('open') }
+
+    // DATA
+    function getCK() { return JSON.parse(localStorage.getItem('ms_ck') || '[]') }
+    function addCK(type, mood, note) { const l = getCK(); l.push({ type, mood, note: note || '', ts: new Date().toISOString() }); localStorage.setItem('ms_ck', JSON.stringify(l)); document.getElementById('topTotal').textContent = l.length }
+    function getStreak() { const ck = getCK(); let s = 0, d = new Date(); for (let i = 0; i < 365; i++) { if (ck.some(c => new Date(c.ts).toDateString() === d.toDateString())) { s++; d.setDate(d.getDate() - 1) } else break } return s }
+    function getMF(arr) { const c = {}; arr.forEach(v => c[v] = (c[v] || 0) + 1); return Object.entries(c).sort((a, b) => b[1] - a[1]) }
+
+    // DASHBOARD
+    function updDash() {
+      const ck = getCK(), today = new Date().toDateString(), tck = ck.filter(c => new Date(c.ts).toDateString() === today);
+      document.getElementById('sCI').textContent = tck.length;
+      const sk = getStreak(); document.getElementById('sSt').textContent = sk;
+      const last = ck[ck.length - 1]; document.getElementById('sMd').textContent = last ? (ME[last.mood] || last.mood) : '—';
+      document.getElementById('sTr').textContent = sk > 3 ? '📈 Up' : ck.length ? '➡️ Steady' : '—';
+      // chart
+      const ch = document.getElementById('moodChart'), lb = document.getElementById('moodLabels'); ch.innerHTML = ''; lb.innerHTML = '';
+      const colors = ['#e84393', '#6c5ce7', '#fd79a8', '#a29bfe', '#74b9ff', '#00cec9', '#fab1a0'];
+      for (let i = 6; i >= 0; i--) {
+        const d = new Date(); d.setDate(d.getDate() - i); const ds = d.toDateString();
+        const cnt = ck.filter(c => new Date(c.ts).toDateString() === ds).length;
+        const h = Math.max(8, Math.min(100, cnt * 25));
+        ch.innerHTML += `<div class="chart-bar" style="height:${h}%;background:linear-gradient(180deg,${colors[6 - i]},${colors[6 - i]}88)"><div class="tip">${cnt}</div></div>`;
+        lb.innerHTML += `<span>${d.toLocaleDateString('en-US', { weekday: 'short' })}</span>`;
+      }
+      // donut
+      const dn = document.getElementById('donutArea'); dn.innerHTML = '';
+      const mf = getMF(ck.map(c => c.mood)); const total = ck.length || 1;
+      mf.slice(0, 3).forEach(([mood, cnt]) => {
+        const pct = Math.round(cnt / total * 100); const col = MC[mood] || '#6c5ce7';
+        const dash = 2 * Math.PI * 38; const fill = dash * pct / 100;
+        dn.innerHTML += `<div class="donut"><svg width="100" height="100"><circle cx="50" cy="50" r="38" fill="none" stroke="rgba(255,255,255,.06)" stroke-width="8"/><circle cx="50" cy="50" r="38" fill="none" stroke="${col}" stroke-width="8" stroke-dasharray="${fill} ${dash - fill}" stroke-linecap="round"/></svg><div class="donut-label"><span class="donut-pct">${pct}%</span><span class="donut-name">${mood}</span></div></div>`;
+      });
+      if (!mf.length) dn.innerHTML = '<span style="color:var(--text-dim);font-size:.82rem">No data yet</span>';
+      // feed
+      const fd = document.getElementById('actFeed'), rc = ck.slice(-5).reverse();
+      if (rc.length) { fd.innerHTML = rc.map(c => { const t = new Date(c.ts).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }); const d = new Date(c.ts).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }); const col = MC[c.mood] || 'var(--pink)'; return `<div class="act-item"><div class="act-ic" style="background:${col}22;color:${col}">${ME[c.mood] || '•'}</div><div class="act-txt">${c.type} — <b>${c.mood}</b></div><div class="act-time">${d} ${t}</div></div>` }).join('') }
+    }
+
+    // SUMMARY
+    function updSummary() {
+      const ck = getCK(), total = ck.length || 1, mf = getMF(ck.map(c => c.mood));
+      document.getElementById('smTotal').textContent = ck.length;
+      document.getElementById('smAvg').textContent = mf[0] ? (ME[mf[0][0]] || mf[0][0]) : '—';
+      document.getElementById('smStrk').textContent = getStreak();
+      // 14 day chart
+      const ch = document.getElementById('sumChart'), lb = document.getElementById('sumLabels'); ch.innerHTML = ''; lb.innerHTML = '';
+      const cols = ['#e84393', '#fd79a8', '#6c5ce7', '#a29bfe', '#74b9ff', '#00cec9', '#00b894', '#fab1a0', '#fdcb6e', '#e17055', '#ff7675', '#e84393', '#6c5ce7', '#a29bfe'];
+      for (let i = 13; i >= 0; i--) {
+        const d = new Date(); d.setDate(d.getDate() - i); const ds = d.toDateString();
+        const cnt = ck.filter(c => new Date(c.ts).toDateString() === ds).length;
+        const h = Math.max(5, Math.min(100, cnt * 20));
+        ch.innerHTML += `<div class="chart-bar" style="height:${h}%;background:linear-gradient(180deg,${cols[13 - i]},${cols[13 - i]}66)"><div class="tip">${cnt}</div></div>`;
+        if (i % 2 === 0) lb.innerHTML += `<span>${d.getDate()}/${d.getMonth() + 1}</span>`;
+      }
+      // rings
+      const rg = document.getElementById('ringArea'); rg.innerHTML = '';
+      mf.slice(0, 5).forEach(([mood, cnt]) => {
+        const pct = Math.round(cnt / total * 100); const col = MC[mood] || '#6c5ce7'; const dash = 2 * Math.PI * 24; const fill = dash * pct / 100;
+        rg.innerHTML += `<div class="ring-item"><div class="ring"><svg width="60" height="60"><circle cx="30" cy="30" r="24" fill="none" stroke="rgba(255,255,255,.06)" stroke-width="5"/><circle cx="30" cy="30" r="24" fill="none" stroke="${col}" stroke-width="5" stroke-dasharray="${fill} ${dash - fill}" stroke-linecap="round"/></svg><div class="ring-val">${pct}%</div></div><div class="ring-name">${mood}</div></div>`;
+      });
+      if (!mf.length) rg.innerHTML = '<span style="color:var(--text-dim);font-size:.82rem">No data</span>';
+      // progress bars
+      const pb = document.getElementById('progBars'); pb.innerHTML = '';
+      mf.forEach(([mood, cnt]) => {
+        const pct = Math.round(cnt / total * 100); const col = MC[mood] || '#6c5ce7';
+        pb.innerHTML += `<div class="prog"><div class="prog-head"><span class="prog-label">${ME[mood] || ''} ${mood}</span><span class="prog-val">${cnt}</span></div><div class="prog-track"><div class="prog-fill" style="width:${pct}%;background:linear-gradient(90deg,${col},${col}88)"></div></div></div>`;
+      });
+      if (!mf.length) pb.innerHTML = '<span style="color:var(--text-dim);font-size:.82rem">No data yet</span>';
+      // num cards
+      const nc = document.getElementById('numCards');
+      const wk = ck.filter(c => (Date.now() - new Date(c.ts)) / (86400000) < 7).length;
+      nc.innerHTML = `<div class="num-c" style="border-color:var(--pink)"><div class="num-v">${ck.length}</div><div class="num-l">All Time</div></div><div class="num-c" style="border-color:var(--purple)"><div class="num-v">${wk}</div><div class="num-l">This Week</div></div><div class="num-c" style="border-color:var(--teal)"><div class="num-v">${getStreak()}</div><div class="num-l">Streak</div></div>`;
+      // full donut
+      const fd = document.getElementById('fullDonut'); fd.innerHTML = '';
+      mf.forEach(([mood, cnt]) => {
+        const pct = Math.round(cnt / total * 100); const col = MC[mood] || '#6c5ce7'; const dash = 2 * Math.PI * 38; const fill = dash * pct / 100;
+        fd.innerHTML += `<div class="donut"><svg width="100" height="100"><circle cx="50" cy="50" r="38" fill="none" stroke="rgba(255,255,255,.06)" stroke-width="8"/><circle cx="50" cy="50" r="38" fill="none" stroke="${col}" stroke-width="8" stroke-dasharray="${fill} ${dash - fill}" stroke-linecap="round"/></svg><div class="donut-label"><span class="donut-pct">${pct}%</span><span class="donut-name">${mood}</span></div></div>`;
+      });
+    }
+
+    // PROFILE
+    function updProfile() {
+      const ck = getCK(), mf = getMF(ck.map(c => c.mood)), total = ck.length || 1;
+      const pb = document.getElementById('pfBars'); pb.innerHTML = '';
+      mf.forEach(([mood, cnt]) => {
+        const pct = Math.round(cnt / total * 100); const col = MC[mood] || '#6c5ce7';
+        pb.innerHTML += `<div class="prog"><div class="prog-head"><span class="prog-label">${ME[mood] || ''} ${mood}</span><span class="prog-val">${pct}%</span></div><div class="prog-track"><div class="prog-fill" style="width:${pct}%;background:linear-gradient(90deg,${col},${col}88)"></div></div></div>`;
+      });
+      if (!mf.length) pb.innerHTML = '<p style="color:var(--text-dim);font-size:.82rem">No data yet</p>';
+      const sk = getStreak();
+      const badges = [{ i: '🌱', n: 'First Check-In', on: ck.length >= 1 }, { i: '🔥', n: '3-Day Streak', on: sk >= 3 }, { i: '⚡', n: '7-Day Streak', on: sk >= 7 }, { i: '🏆', n: '30-Day', on: sk >= 30 }, { i: '📝', n: '10 Reflections', on: ck.filter(c => c.type === 'reflection').length >= 10 }, { i: '🎬', n: '5 Videos', on: ck.filter(c => c.type === 'video').length >= 5 }];
+      document.getElementById('pfBadges').innerHTML = badges.map(b => `<div class="badge-i ${b.on ? 'on' : ''}"><span class="bi">${b.on ? b.i : '🔒'}</span><span class="bn">${b.n}</span></div>`).join('');
+      document.getElementById('pfTC').textContent = ck.length; document.getElementById('pfSK').textContent = sk;
+      document.getElementById('pfTM').textContent = mf[0] ? (ME[mf[0][0]] || mf[0][0]) : '—';
+    }
+
+    // API
+    function setH(ok, m) { document.getElementById('hDot').className = 's-dot ' + (ok ? 'ok' : 'err'); document.getElementById('hTxt').textContent = m }
+    async function api(p, m = 'GET', b = null) { const o = { method: m, headers: { 'Content-Type': 'application/json' } }; if (b) o.body = JSON.stringify(b); const r = await fetch(p, o); let d; try { d = await r.json() } catch { d = { error: 'Err' } } return { ok: r.ok, data: d } }
+    async function checkH() { const o = await api('/health'); setH(o.ok, o.ok ? 'Online' : 'Error') }
+
+    // LLM STATUS
+    async function checkLLM() {
+      try {
+        const o = await api('/llm/status');
+        if (o.ok && o.data.available) {
+          llmOnline = true;
+          document.getElementById('llmDot').className = 's-dot ok';
+          document.getElementById('llmTxt').textContent = '🤖 AI: ' + o.data.provider;
+          document.getElementById('llmPill').title = 'Model: ' + o.data.model;
+        } else {
+          llmOnline = false;
+          document.getElementById('llmDot').className = 's-dot';
+          document.getElementById('llmTxt').textContent = '⚠️ Fallback';
+        }
+      } catch {
+        llmOnline = false;
+        document.getElementById('llmDot').className = 's-dot err';
+        document.getElementById('llmTxt').textContent = '⚠️ Offline';
+      }
+    }
+
+    // CHECK-IN
+    async function qC(f, el) {
+      document.querySelectorAll('.mood-btn').forEach(b => b.classList.remove('sel')); if (el) el.classList.add('sel');
+      document.getElementById('qRes').innerHTML = '<span class="spinner"></span> Checking in...';
+      const o = await api('/checkin/quick', 'POST', { feeling: f });
+      if (!o.ok) { document.getElementById('qRes').textContent = 'Error. Try again.'; return; }
+      const src = o.data.llm_source || 'none';
+      const badge = (src !== 'none' && src !== 'fallback' && src !== 'error') ? '<span class="ai-badge ai-on">✨ AI</span>' : (src === 'fallback' ? '<span class="ai-badge ai-off">⚠️ Fallback</span>' : '');
+      document.getElementById('qRes').innerHTML = (o.data.message || 'Saved!') + badge;
+      if (o.ok) addCK('quick', f);
+    }
+    async function saveRef() {
+      const t = document.getElementById('textInput').value.trim(); if (t.length < 3) { document.getElementById('tRes').textContent = 'Write more, or skip.'; return }
+      document.getElementById('tRes').innerHTML = '<span class="spinner"></span> Analyzing your reflection...';
+      const o = await api('/predict/text', 'POST', { text: t, save_session: true }); if (!o.ok) { document.getElementById('tRes').textContent = 'Could not save.'; return }
+      const emotion = o.data.emotion || 'neutral';
+      const emoji = ME[emotion] || '💜';
+      addCK('reflection', emotion, t.substring(0, 50));
+      if (o.data.llm_response && o.data.llm_source !== 'none' && o.data.llm_source !== 'error') {
+        document.getElementById('tRes').innerHTML = `<div style="margin-bottom:8px;font-size:.75rem;color:var(--pink);font-weight:600">MOOD DETECTED: ${emoji} ${emotion.toUpperCase()} · via ${o.data.llm_source}</div>`;
+        typeT('tRes', o.data.llm_response, true);
+      } else {
+        document.getElementById('tRes').innerHTML = `${emoji} Mood detected: <b>${emotion}</b> — Reflection saved 💜`;
+      }
+    }
+    function skipRef() { document.getElementById('tRes').textContent = 'Skipped ✨' }
+
+    // VISUAL
+    async function capFrame() {
+      const v = document.getElementById('cam'), c = document.getElementById('camC'), ctx = c.getContext('2d'); if (!v.videoWidth) return; ctx.drawImage(v, 0, 0, c.width, c.height); const img = c.toDataURL('image/jpeg', 0.7);
+      const o = await api('/visual/predict-frame', 'POST', { image: img }); if (!o.ok) { document.getElementById('camB').textContent = '📷 Reading...'; return }
+      if (o.data.face_detected) { visualSamples.push({ emotion: o.data.emotion, confidence: o.data.confidence }); document.getElementById('camB').textContent = '🟢 Running' } else document.getElementById('camB').textContent = '↔ Adjust'
+    }
+    async function startV() {
+      if (mediaStream) return; try { mediaStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false }) } catch { document.getElementById('vRes').textContent = 'Camera denied.'; return }
+      visualSamples = []; document.getElementById('cam').srcObject = mediaStream; document.getElementById('camW').classList.add('on'); document.getElementById('camB').textContent = '🟢 Running'; document.getElementById('vRes').textContent = 'Started.'; inferTimer = setInterval(capFrame, 1000)
+    }
+    async function stopV() {
+      if (inferTimer) { clearInterval(inferTimer); inferTimer = null } if (mediaStream) { mediaStream.getTracks().forEach(t => t.stop()); mediaStream = null }
+      document.getElementById('cam').srcObject = null; document.getElementById('camW').classList.remove('on'); document.getElementById('camB').textContent = '📷 Idle';
+      if (!visualSamples.length) { document.getElementById('vRes').textContent = 'No signal. Try again.'; return }
+      const cnt = {}; let cs = 0; for (const s of visualSamples) { cnt[s.emotion] = (cnt[s.emotion] || 0) + 1; cs += Number(s.confidence) || 0 }
+      const dom = Object.entries(cnt).sort((a, b) => b[1] - a[1])[0][0], avg = cs / visualSamples.length;
+      const o = await api('/visual/save-session', 'POST', { mood: dom, confidence: avg }); document.getElementById('vRes').textContent = o.ok ? 'Saved 🎬' : 'Error.'; if (o.ok) addCK('video', dom)
+    }
+    function skipV() { stopV(); document.getElementById('vRes').textContent = 'Skipped 🎬' }
+    async function getSupport() {
+      document.getElementById('fRes').innerHTML = '<span class="spinner"></span> Loading...'; const o = await api('/fuse', 'POST', {});
+      if (!o.ok) { document.getElementById('fRes').textContent = o.data.error || 'Complete check-ins first.'; return }
+      const srcBadge = o.data.llm_source && o.data.llm_source !== 'fallback' ? '<span class="ai-badge ai-on">✨ ' + o.data.llm_source + '</span>' : '<span class="ai-badge ai-off">⚠️ Fallback</span>';
+      document.getElementById('fRes').innerHTML = '';
+      typeT('fRes', '💬 ' + (o.data.message || 'Pause and breathe.') + (o.data.nudge ? '\n\n💡 ' + o.data.nudge : ''));
+      setTimeout(() => document.getElementById('fRes').insertAdjacentHTML('beforeend', srcBadge), 600);
+    }
+    async function getWeekly() {
+      document.getElementById('wRes').innerHTML = '<span class="spinner"></span> Loading...'; const o = await api('/insights/weekly', 'GET');
+      if (!o.ok) { document.getElementById('wRes').textContent = 'Error loading.'; return }
+      const srcBadge = o.data.llm_source && o.data.llm_source !== 'fallback' ? '<span class="ai-badge ai-on">✨ ' + o.data.llm_source + '</span>' : '<span class="ai-badge ai-off">⚠️ Fallback</span>';
+      document.getElementById('wRes').innerHTML = '';
+      typeT('wRes', '📊 ' + (o.data.summary || 'No summary yet.'));
+      setTimeout(() => document.getElementById('wRes').insertAdjacentHTML('beforeend', srcBadge), 600);
+    }
+    function typeT(id, txt, append) { const el = document.getElementById(id); if (!append) el.textContent = ''; let i = 0; const t = setInterval(() => { if (i < txt.length) { el.insertAdjacentText('beforeend', txt[i]); i++ } else clearInterval(t) }, 15) }
+
+    // AI CHAT
+    async function sendChat() {
+      const input = document.getElementById('chatInput');
+      const msg = input.value.trim();
+      if (!msg) return;
+      input.value = '';
+      const btn = document.getElementById('chatSendBtn');
+      btn.disabled = true;
+
+      // Add user bubble
+      const messages = document.getElementById('chatMessages');
+      messages.insertAdjacentHTML('beforeend', `<div class="chat-bubble user">${escHtml(msg)}</div>`);
+
+      // Add typing indicator
+      const typingId = 'typing-' + Date.now();
+      messages.insertAdjacentHTML('beforeend', `<div class="chat-typing" id="${typingId}"><span></span><span></span><span></span></div>`);
+      messages.scrollTop = messages.scrollHeight;
+
+      try {
+        const o = await api('/chat', 'POST', { message: msg });
+        const typing = document.getElementById(typingId);
+        if (typing) typing.remove();
+
+        if (o.ok) {
+          const src = o.data.llm_source || 'fallback';
+          const srcTag = src !== 'fallback' ? `<div class="src-tag">✨ via ${src}</div>` : `<div class="src-tag">⚠️ fallback</div>`;
+          const bubble = document.createElement('div');
+          bubble.className = 'chat-bubble ai';
+          messages.appendChild(bubble);
+          // Type out the reply
+          const reply = o.data.reply || 'I\'m here for you. Take a moment to breathe.';
+          let i = 0;
+          const t = setInterval(() => {
+            if (i < reply.length) { bubble.insertAdjacentText('beforeend', reply[i]); i++; messages.scrollTop = messages.scrollHeight; }
+            else { clearInterval(t); bubble.insertAdjacentHTML('beforeend', srcTag); }
+          }, 15);
+        } else {
+          messages.insertAdjacentHTML('beforeend', `<div class="chat-bubble ai">Sorry, I couldn't process that right now. Please try again. 💜</div>`);
+        }
+      } catch {
+        const typing = document.getElementById(typingId);
+        if (typing) typing.remove();
+        messages.insertAdjacentHTML('beforeend', `<div class="chat-bubble ai">Connection error. Please check your server. 💜</div>`);
+      }
+      btn.disabled = false;
+      messages.scrollTop = messages.scrollHeight;
+    }
+
+    function escHtml(t) { const d = document.createElement('div'); d.textContent = t; return d.innerHTML; }
+
+    // INIT
+    (function () { const u = JSON.parse(localStorage.getItem('ms_u') || 'null'); if (u) enter(); checkH(); checkLLM(); setInterval(checkLLM, 30000) })();
+  </script>
+</body>
+
+</html>
