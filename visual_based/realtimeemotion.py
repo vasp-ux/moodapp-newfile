@@ -1,4 +1,5 @@
 import cv2
+import json
 import numpy as np
 import time
 import os
@@ -11,6 +12,7 @@ import tensorflow as tf
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 MODEL_PATH = os.path.join(BASE_DIR, "emotion_model.keras")
+LABELS_PATH = os.path.join(BASE_DIR, "emotion_labels.json")
 
 # ================= LOAD MODEL ================= #
 
@@ -20,10 +22,36 @@ print("Model loaded successfully")
 
 # ================= CONFIG ================= #
 
-EMOTIONS = [
-    "angry", "contempt", "disgust", "fear",
-    "happy", "neutral", "sad", "surprise"
+DEFAULT_EMOTIONS = [
+    "angry",
+    "disgust",
+    "fear",
+    "happy",
+    "neutral",
+    "sad",
+    "surprise",
+    "contempt",
 ]
+
+
+def load_emotions():
+    expected = int(model.output_shape[-1])
+    if os.path.exists(LABELS_PATH):
+        try:
+            with open(LABELS_PATH, "r", encoding="utf-8") as f:
+                labels = json.load(f)
+            if (
+                isinstance(labels, list)
+                and len(labels) == expected
+                and all(isinstance(item, str) for item in labels)
+            ):
+                return [item.strip().lower() for item in labels]
+        except Exception:
+            pass
+    return DEFAULT_EMOTIONS[:expected]
+
+
+EMOTIONS = load_emotions()
 
 IMG_SIZE = 48
 
@@ -46,6 +74,7 @@ last_emotion = "neutral"
 # ================= HELPERS ================= #
 
 def preprocess_face(face_gray):
+    face_gray = cv2.equalizeHist(face_gray)
     face = cv2.resize(face_gray, (IMG_SIZE, IMG_SIZE)).astype("float32") / 255.0
 
     if MODEL_INPUT_CHANNELS == 3:
@@ -101,7 +130,7 @@ def start_emotion_session():
         confidence = 0.0
 
         if len(faces) > 0:
-            x, y, w, h = faces[0]
+            x, y, w, h = max(faces, key=lambda f: f[2] * f[3])
 
             face = gray[y:y + h, x:x + w]
             face = preprocess_face(face)

@@ -1,114 +1,252 @@
+import argparse
+import json
 import os
+import random
+from pathlib import Path
+
+import cv2
 import numpy as np
+import tensorflow as tf
 from sklearn.model_selection import train_test_split
+from sklearn.utils.class_weight import compute_class_weight
+from tensorflow.keras import callbacks, layers, models, optimizers
+from tensorflow.keras.utils import to_categorical
 
-from tensorflow.keras.applications import MobileNetV2
-from tensorflow.keras.layers import Dense, GlobalAveragePooling2D
-from tensorflow.keras.models import Model
-from tensorflow.keras.optimizers import Adam
-from tensorflow.keras.callbacks import EarlyStopping, ModelCheckpoint
-
-# ---------------- BASE DIRECTORY ----------------
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-
-
-def prepare_image_tensor(x):
-    """Ensure dataset matches MobileNetV2 input format."""
-    if x.ndim == 3:
-        x = np.expand_dims(x, axis=-1)
-
-    if x.ndim != 4:
-        raise ValueError(f"Unsupported X shape: {x.shape}")
-
-    if x.shape[-1] == 1:
-        x = np.repeat(x, 3, axis=-1)
-    elif x.shape[-1] != 3:
-        raise ValueError(f"Expected 1 or 3 channels, got {x.shape[-1]}")
-
-    x = x.astype("float32")
-    if x.max() > 1.0:
-        x /= 255.0
-
-    return x
+SEED = 42
+IMG_SIZE = 48
+EMOTIONS = [
+    "angry",
+    "disgust",
+    "fear",
+    "happy",
+    "neutral",
+    "sad",
+    "surprise",
+    "contempt",
+]
 
 
-# ---------------- LOAD DATA ----------------
-print("Loading dataset...")
+def _default_dataset_candidates(base_dir):
+    project_root = Path(base_dir).parent
+    return [
+        Path(base_dir) / "fer2013" / "train_balanced",
+        Path(base_dir) / "fer2013" / "train",
+        project_root / "mood-classification-main" / "visual" / "fer2013" / "train_balanced",
+        project_root / "mood-classification-main" / "visual" / "fer2013" / "train",
+    ]
 
-X = np.load(os.path.join(BASE_DIR, "X.npy"))
-y = np.load(os.path.join(BASE_DIR, "y.npy"))
-X = prepare_image_tensor(X)
 
-# Split dataset
-X_train, X_test, y_train, y_test = train_test_split(
-    X,
-    y,
-    test_size=0.2,
-    random_state=42,
-    stratify=y,
-)
+def resolve_dataset_path(base_dir, dataset_arg):
+    if dataset_arg:
+        dataset_path = Path(dataset_arg).expanduser().resolve()
+        if dataset_path.exists():
+            return dataset_path
+        raise FileNotFoundError(f"Dataset path not found: {dataset_path}")
 
-print("Dataset loaded")
-print("X shape:", X.shape)
-print("y shape:", y.shape)
-print("Training samples:", len(X_train))
-print("Testing samples:", len(X_test))
+    for candidate in _default_dataset_candidates(base_dir):
+        if candidate.exists():
+            return candidate.resolve()
 
-# ---------------- BUILD MODEL ----------------
-print("Building MobileNet model...")
+    searched = [str(p) for p in _default_dataset_candidates(base_dir)]
+    raise FileNotFoundError(
+        "Could not find FER dataset directory. Tried:\n- " + "\n- ".join(searched)
+    )
 
-base_model = MobileNetV2(
-    input_shape=(48, 48, 3),
-    include_top=False,
-    weights="imagenet",
-)
 
-# Freeze base layers
-for layer in base_model.layers:
-    layer.trainable = False
+def load_dataset(dataset_path, max_per_class):
+    rng = random.Random(SEED)
+    x_data = []
+    y_data = []
+    class_counts = {}
 
-x = base_model.output
-x = GlobalAveragePooling2D()(x)
-x = Dense(128, activation="relu")(x)
-x = Dense(8, activation="softmax")(x)
+    for class_index, emotion in enumerate(EMOTIONS):
+        class_dir = dataset_path / emotion
+        if not class_dir.exists():
+            raise FileNotFoundError(f"Missing class folder: {class_dir}")
 
-model = Model(inputs=base_model.input, outputs=x)
+        images = [p for p in class_dir.iterdir() if p.is_file()]
+        rng.shuffle(images)
+        if max_per_class and max_per_class > 0:
+            images = images[:max_per_class]
 
-model.compile(
-    optimizer=Adam(learning_rate=0.0001),
-    loss="sparse_categorical_crossentropy",
-    metrics=["accuracy"],
-)
+        kept = 0
+        for image_path in images:
+            gray = cv2.imread(str(image_path), cv2.IMREAD_GRAYSCALE)
+            if gray is None:
+                continue
+            gray = cv2.resize(gray, (IMG_SIZE, IMG_SIZE))
+            x_data.append(gray)
+            y_data.append(class_index)
+            kept += 1
 
-model.summary()
+        class_counts[emotion] = kept
 
-# ---------------- CALLBACKS ----------------
-MODEL_PATH = os.path.join(BASE_DIR, "emotion_model.keras")
+    x_data = np.asarray(x_data, dtype="float32") / 255.0
+    x_data = np.expand_dims(x_data, axis=-1)
+    y_data = np.asarray(y_data, dtype="int32")
+    return x_data, y_data, class_counts
 
-early_stop = EarlyStopping(
-    monitor="val_loss",
-    patience=5,
-    restore_best_weights=True,
-)
 
-checkpoint = ModelCheckpoint(
-    MODEL_PATH,
-    monitor="val_accuracy",
-    save_best_only=True,
-    verbose=1,
-)
+def build_model(num_classes):
+    model = models.Sequential(
+        [
+            layers.Input(shape=(IMG_SIZE, IMG_SIZE, 1)),
+            layers.RandomFlip("horizontal"),
+            layers.RandomRotation(0.08),
+            layers.RandomTranslation(0.08, 0.08),
+            layers.RandomZoom(0.10),
+            layers.Conv2D(32, (3, 3), padding="same", use_bias=False),
+            layers.BatchNormalization(),
+            layers.ReLU(),
+            layers.MaxPooling2D((2, 2)),
+            layers.Dropout(0.20),
+            layers.SeparableConv2D(64, (3, 3), padding="same", use_bias=False),
+            layers.BatchNormalization(),
+            layers.ReLU(),
+            layers.MaxPooling2D((2, 2)),
+            layers.Dropout(0.25),
+            layers.SeparableConv2D(128, (3, 3), padding="same", use_bias=False),
+            layers.BatchNormalization(),
+            layers.ReLU(),
+            layers.MaxPooling2D((2, 2)),
+            layers.Dropout(0.30),
+            layers.SeparableConv2D(256, (3, 3), padding="same", use_bias=False),
+            layers.BatchNormalization(),
+            layers.ReLU(),
+            layers.GlobalAveragePooling2D(),
+            layers.Dense(256, activation="relu"),
+            layers.Dropout(0.35),
+            layers.Dense(num_classes, activation="softmax"),
+        ]
+    )
+    model.compile(
+        optimizer=optimizers.Adam(learning_rate=3e-4),
+        loss=tf.keras.losses.CategoricalCrossentropy(label_smoothing=0.05),
+        metrics=["accuracy"],
+    )
+    return model
 
-# ---------------- TRAIN ----------------
-print("Training started...")
 
-model.fit(
-    X_train,
-    y_train,
-    validation_data=(X_test, y_test),
-    epochs=30,
-    batch_size=64,
-    callbacks=[early_stop, checkpoint],
-)
+def save_labels(base_dir):
+    labels_path = Path(base_dir) / "emotion_labels.json"
+    with open(labels_path, "w", encoding="utf-8") as f:
+        json.dump(EMOTIONS, f, indent=2)
+    return labels_path
 
-print("\nModel training completed")
-print("Model saved at:", MODEL_PATH)
+
+def parse_args():
+    parser = argparse.ArgumentParser(
+        description="Train visual emotion model with balanced augmentation."
+    )
+    parser.add_argument(
+        "--dataset",
+        type=str,
+        default="",
+        help="FER train directory containing emotion folders.",
+    )
+    parser.add_argument(
+        "--max-per-class",
+        type=int,
+        default=0,
+        help="Optional cap for samples per class (0 = use all).",
+    )
+    parser.add_argument("--epochs", type=int, default=18)
+    parser.add_argument("--batch-size", type=int, default=64)
+    parser.add_argument("--val-size", type=float, default=0.2)
+    return parser.parse_args()
+
+
+def main():
+    args = parse_args()
+    base_dir = Path(__file__).resolve().parent
+
+    random.seed(SEED)
+    np.random.seed(SEED)
+    tf.random.set_seed(SEED)
+
+    dataset_path = resolve_dataset_path(base_dir, args.dataset)
+    print(f"Dataset path: {dataset_path}")
+
+    x_data, y_data, class_counts = load_dataset(dataset_path, args.max_per_class)
+    print("Class counts:")
+    for emotion in EMOTIONS:
+        print(f"  {emotion:10s} {class_counts.get(emotion, 0)}")
+
+    print(f"\nTotal samples: {len(x_data)}")
+    print(f"Input shape: {x_data.shape}")
+
+    y_categorical = to_categorical(y_data, num_classes=len(EMOTIONS))
+
+    x_train, x_val, y_train, y_val, y_train_raw, y_val_raw = train_test_split(
+        x_data,
+        y_categorical,
+        y_data,
+        test_size=args.val_size,
+        random_state=SEED,
+        stratify=y_data,
+    )
+
+    classes = np.unique(y_train_raw)
+    class_weights_arr = compute_class_weight(
+        class_weight="balanced",
+        classes=classes,
+        y=y_train_raw,
+    )
+    class_weights = {int(c): float(w) for c, w in zip(classes, class_weights_arr)}
+    print("\nClass weights:", class_weights)
+
+    model = build_model(num_classes=len(EMOTIONS))
+    model.summary()
+
+    model_path = base_dir / "emotion_model.keras"
+    log_path = base_dir / "training_history.csv"
+
+    train_callbacks = [
+        callbacks.ModelCheckpoint(
+            str(model_path),
+            monitor="val_accuracy",
+            mode="max",
+            save_best_only=True,
+            verbose=1,
+        ),
+        callbacks.EarlyStopping(
+            monitor="val_accuracy",
+            mode="max",
+            patience=6,
+            restore_best_weights=True,
+            verbose=1,
+        ),
+        callbacks.ReduceLROnPlateau(
+            monitor="val_loss",
+            factor=0.5,
+            patience=3,
+            min_lr=1e-6,
+            verbose=1,
+        ),
+        callbacks.CSVLogger(str(log_path)),
+    ]
+
+    print("\nTraining started...")
+    model.fit(
+        x_train,
+        y_train,
+        validation_data=(x_val, y_val),
+        epochs=args.epochs,
+        batch_size=args.batch_size,
+        callbacks=train_callbacks,
+        class_weight=class_weights,
+        verbose=1,
+    )
+
+    val_loss, val_acc = model.evaluate(x_val, y_val, verbose=0)
+    print(f"\nValidation accuracy: {val_acc:.4f}")
+    print(f"Validation loss: {val_loss:.4f}")
+
+    labels_path = save_labels(base_dir)
+    print(f"Model saved at: {model_path}")
+    print(f"Label map saved at: {labels_path}")
+    print(f"Training log saved at: {log_path}")
+
+
+if __name__ == "__main__":
+    main()

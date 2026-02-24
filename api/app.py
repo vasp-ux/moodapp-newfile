@@ -1,5 +1,7 @@
 import base64
 import csv
+import json
+import logging
 import os
 import sys
 from datetime import datetime, timedelta
@@ -12,6 +14,10 @@ from flask import Flask, jsonify, request, send_from_directory
 from flask_cors import CORS
 
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+# New improved models from mood-classification-main
+NEW_TEXT_DIR = os.path.join(PROJECT_ROOT, "mood-classification-main", "text")
+NEW_VISUAL_DIR = os.path.join(PROJECT_ROOT, "mood-classification-main", "visual")
+# Legacy dirs kept as fallback references
 TEXT_DIR = os.path.join(PROJECT_ROOT, "text based")
 VISUAL_DIR = os.path.join(PROJECT_ROOT, "visual_based")
 UI_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "ui")
@@ -25,19 +31,21 @@ from data import session_storage  # noqa: E402
 app = Flask(__name__)
 CORS(app)
 
+# Text model: use original (8-class: angry/contempt/disgust/fear/happy/neutral/sad/surprise)
+# The new mood-classification-main text model uses a different 6-class scheme (joy/love/etc.)
+# and cannot be fused with the visual model or QUICK_CHECKIN_MAP below.
 TEXT_MODEL_PATH = os.path.join(TEXT_DIR, "text_emotion_model.pkl")
 VECTORIZER_PATH = os.path.join(TEXT_DIR, "tfidf_vectorizer.pkl")
-VISUAL_MODEL_PATH = os.path.join(VISUAL_DIR, "emotion_model.keras")
-
-EMOTIONS = [
-    "angry",
-    "contempt",
-    "disgust",
-    "fear",
-    "happy",
-    "neutral",
-    "sad",
-    "surprise",
+# Canonical label order for visual models.
+DEFAULT_EMOTIONS = [
+    "angry",    # 0
+    "disgust",  # 1
+    "fear",     # 2
+    "happy",    # 3
+    "neutral",  # 4
+    "sad",      # 5
+    "surprise", # 6
+    "contempt", # 7
 ]
 
 QUICK_CHECKIN_MAP = {
@@ -50,8 +58,69 @@ AI_MODE = os.getenv("AI_MODE", "false").strip().lower() == "true"
 text_model = joblib.load(TEXT_MODEL_PATH)
 vectorizer = joblib.load(VECTORIZER_PATH)
 
-visual_model = tf.keras.models.load_model(VISUAL_MODEL_PATH, compile=False)
+
+def _load_visual_model():
+    env_model = os.getenv("VISUAL_MODEL_PATH", "").strip()
+    candidates = []
+    if env_model:
+        candidates.append(env_model)
+    candidates.extend(
+        [
+            os.path.join(VISUAL_DIR, "emotion_model.keras"),
+            os.path.join(NEW_VISUAL_DIR, "emotion_model.keras"),
+        ]
+    )
+
+    errors = []
+    for model_path in candidates:
+        if not os.path.exists(model_path):
+            errors.append(f"{model_path} (missing)")
+            continue
+        try:
+            model = tf.keras.models.load_model(model_path, compile=False)
+            return model, model_path
+        except Exception as model_error:
+            errors.append(f"{model_path} ({model_error})")
+            continue
+
+    raise RuntimeError(
+        "Unable to load any visual model. Attempts:\n- " + "\n- ".join(errors)
+    )
+
+
+def _load_emotion_labels(model_path, expected_classes):
+    labels_path = os.path.join(os.path.dirname(model_path), "emotion_labels.json")
+    if not os.path.exists(labels_path):
+        return DEFAULT_EMOTIONS[:expected_classes]
+
+    try:
+        with open(labels_path, "r", encoding="utf-8") as f:
+            labels = json.load(f)
+        if (
+            isinstance(labels, list)
+            and len(labels) == expected_classes
+            and all(isinstance(item, str) for item in labels)
+        ):
+            return [item.strip().lower() for item in labels]
+        logging.warning(
+            "Ignoring invalid emotion_labels.json at %s (expected %s labels).",
+            labels_path,
+            expected_classes,
+        )
+    except Exception as labels_error:
+        logging.warning("Failed reading emotion labels from %s: %s", labels_path, labels_error)
+
+    return DEFAULT_EMOTIONS[:expected_classes]
+
+
+visual_model, visual_model_path = _load_visual_model()
 visual_input_channels = visual_model.input_shape[-1]
+visual_output_classes = int(visual_model.output_shape[-1])
+EMOTIONS = _load_emotion_labels(visual_model_path, visual_output_classes)
+
+if len(EMOTIONS) != visual_output_classes:
+    EMOTIONS = DEFAULT_EMOTIONS[:visual_output_classes]
+
 face_cascade = cv2.CascadeClassifier(
     cv2.data.haarcascades + "haarcascade_frontalface_default.xml"
 )
@@ -101,6 +170,8 @@ def _predict_emotion_from_frame(frame):
     # Select largest detected face.
     x, y, w, h = max(faces, key=lambda f: f[2] * f[3])
     face = gray[y : y + h, x : x + w]
+    # Normalize contrast to improve robustness under uneven lighting.
+    face = cv2.equalizeHist(face)
     face = cv2.resize(face, (48, 48)).astype("float32") / 255.0
 
     if visual_input_channels == 3:
@@ -186,7 +257,7 @@ No diagnosis, no technical wording.
 
 
 def _ai_mode_available():
-    return AI_MODE and session_storage.LLM_AVAILABLE
+    return AI_MODE and session_storage.is_llm_ready()
 
 
 @app.get("/health")
@@ -307,6 +378,14 @@ Rules:
             llm_response = ""
             llm_source = "error"
 
+    companion_synced = False
+    if llm_response:
+        try:
+            session_storage.sync_reflection_to_companion(text, llm_response)
+            companion_synced = True
+        except Exception:
+            companion_synced = False
+
     return jsonify(
         {
             "emotion": emotion,
@@ -314,6 +393,9 @@ Rules:
             "saved": bool(payload.get("save_session", True)),
             "llm_response": llm_response,
             "llm_source": llm_source,
+            "companion_reply": llm_response,
+            "companion_source": llm_source,
+            "companion_synced": companion_synced,
         }
     ), 200
 
@@ -389,7 +471,7 @@ def fuse_latest():
 
     llm_source = getattr(session_storage, "LAST_LLM_SOURCE", "fallback")
     llm_error = getattr(session_storage, "LAST_LLM_ERROR", "")
-    mode = "ai" if llm_source in ["openrouter", "gemini"] else "fallback"
+    mode = "ai" if llm_source in ["openrouter", "gemini", "ollama"] else "fallback"
 
     return jsonify(
         {
@@ -426,7 +508,7 @@ def weekly_insights():
         summary = session_storage.get_llm_response(prompt)
         llm_source = getattr(session_storage, "LAST_LLM_SOURCE", "fallback")
         llm_error = getattr(session_storage, "LAST_LLM_ERROR", "")
-        mode = "ai" if llm_source in ["openrouter", "gemini"] else "fallback"
+        mode = "ai" if llm_source in ["openrouter", "gemini", "ollama"] else "fallback"
     else:
         summary = _soft_weekly_summary(rows)
         llm_source = "fallback"
@@ -440,6 +522,35 @@ def weekly_insights():
             "mode": mode,
             "llm_source": llm_source,
             "llm_error": llm_error,
+        }
+    ), 200
+
+
+@app.get("/insights/charts")
+def chart_insights():
+    try:
+        days = int(request.args.get("days", 7))
+    except (TypeError, ValueError):
+        days = 7
+
+    try:
+        weeks = int(request.args.get("weeks", 8))
+    except (TypeError, ValueError):
+        weeks = 8
+
+    days = max(1, min(days, 30))
+    weeks = max(1, min(weeks, 26))
+
+    chart_data = session_storage.get_chart_data(days=days, weeks=weeks)
+
+    return jsonify(
+        {
+            "days": days,
+            "weeks": weeks,
+            "daily": chart_data.get("daily", []),
+            "weekly": chart_data.get("weekly", []),
+            "stats": chart_data.get("stats", {}),
+            "saved_weekly_file": chart_data.get("saved_weekly_file", ""),
         }
     ), 200
 

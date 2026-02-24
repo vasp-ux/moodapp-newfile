@@ -703,6 +703,22 @@
       color: var(--text-dim)
     }
 
+    .chart-meta {
+      margin-top: 8px;
+      padding: 8px 10px;
+      border-radius: var(--r-xs);
+      border: 1px solid rgba(255, 255, 255, .08);
+      background: rgba(255, 255, 255, .02);
+      font-size: .72rem;
+      color: var(--text-dim)
+    }
+
+    .server-bar {
+      border-radius: 6px 6px 2px 2px;
+      box-shadow: 0 0 16px rgba(233, 30, 99, .2);
+      border: 1px solid rgba(255, 255, 255, .1)
+    }
+
     /* RING GAUGE */
     .ring-row {
       display: flex;
@@ -1557,6 +1573,22 @@
               <div id="numCards" class="num-row"></div>
             </div>
           </div>
+          <div class="grid grid-2 mt">
+            <div class="c">
+              <h2>📅 Daily Chart (7 Days)</h2>
+              <div class="sub">Saved server data from complete check-ins</div>
+              <div id="dailySrvChart" class="chart-area" style="height:180px"></div>
+              <div id="dailySrvLabels" class="chart-labels"></div>
+              <div id="dailySrvMeta" class="chart-meta">No daily chart data yet.</div>
+            </div>
+            <div class="c">
+              <h2>🗓️ Weekly Chart (8 Weeks)</h2>
+              <div class="sub">Week-based trend saved automatically</div>
+              <div id="weeklySrvChart" class="chart-area" style="height:180px"></div>
+              <div id="weeklySrvLabels" class="chart-labels"></div>
+              <div id="weeklySrvMeta" class="chart-meta">No weekly chart data yet.</div>
+            </div>
+          </div>
           <div class="c mt">
             <h2>🍩 Full Breakdown</h2>
             <div class="sub">All emotions visualized</div>
@@ -1735,7 +1767,7 @@
     }
 
     // SUMMARY
-    function updSummary() {
+    async function updSummary() {
       const ck = getCK(), total = ck.length || 1, mf = getMF(ck.map(c => c.mood));
       document.getElementById('smTotal').textContent = ck.length;
       document.getElementById('smAvg').textContent = mf[0] ? (ME[mf[0][0]] || mf[0][0]) : '—';
@@ -1774,6 +1806,100 @@
         const pct = Math.round(cnt / total * 100); const col = MC[mood] || '#6c5ce7'; const dash = 2 * Math.PI * 38; const fill = dash * pct / 100;
         fd.innerHTML += `<div class="donut"><svg width="100" height="100"><circle cx="50" cy="50" r="38" fill="none" stroke="rgba(255,255,255,.06)" stroke-width="8"/><circle cx="50" cy="50" r="38" fill="none" stroke="${col}" stroke-width="8" stroke-dasharray="${fill} ${dash - fill}" stroke-linecap="round"/></svg><div class="donut-label"><span class="donut-pct">${pct}%</span><span class="donut-name">${mood}</span></div></div>`;
       });
+      await loadServerCharts();
+    }
+
+    function renderServerBars(chartId, labelsId, points, valueKey, labelKey) {
+      const chartEl = document.getElementById(chartId);
+      const labelsEl = document.getElementById(labelsId);
+      if (!chartEl || !labelsEl) return;
+
+      chartEl.innerHTML = '';
+      labelsEl.innerHTML = '';
+
+      if (!points || !points.length) {
+        chartEl.innerHTML = '<div style="color:var(--text-dim);font-size:.78rem;padding:12px">No saved data yet.</div>';
+        return;
+      }
+
+      const maxVal = Math.max(...points.map(p => Number(p[valueKey]) || 0), 1);
+      points.forEach((point) => {
+        const value = Number(point[valueKey]) || 0;
+        const dominant = point.dominant_mood || 'neutral';
+        const color = MC[dominant] || '#e84393';
+        const height = Math.max(8, Math.round((value / maxVal) * 100));
+        const avgConf = Math.round((Number(point.avg_confidence) || 0) * 100);
+        const tip = `${value} check-ins | ${dominant} | ${avgConf}% conf`;
+        chartEl.insertAdjacentHTML(
+          'beforeend',
+          `<div class="chart-bar server-bar" style="height:${height}%;background:linear-gradient(180deg,${color},${color}66)"><div class="tip">${escHtml(tip)}</div></div>`
+        );
+        labelsEl.insertAdjacentHTML('beforeend', `<span>${escHtml(String(point[labelKey] || '—'))}</span>`);
+      });
+    }
+
+    async function loadServerCharts() {
+      const dailyMeta = document.getElementById('dailySrvMeta');
+      const weeklyMeta = document.getElementById('weeklySrvMeta');
+      const dailyChart = document.getElementById('dailySrvChart');
+      const weeklyChart = document.getElementById('weeklySrvChart');
+      const dailyLabels = document.getElementById('dailySrvLabels');
+      const weeklyLabels = document.getElementById('weeklySrvLabels');
+
+      if (!dailyMeta || !weeklyMeta || !dailyChart || !weeklyChart || !dailyLabels || !weeklyLabels) return;
+
+      dailyChart.innerHTML = '<span class="spinner"></span>';
+      weeklyChart.innerHTML = '<span class="spinner"></span>';
+      dailyLabels.innerHTML = '';
+      weeklyLabels.innerHTML = '';
+      dailyMeta.textContent = 'Loading daily chart data...';
+      weeklyMeta.textContent = 'Loading weekly chart data...';
+
+      let o;
+      try {
+        o = await api('/insights/charts?days=7&weeks=8', 'GET');
+      } catch {
+        dailyMeta.textContent = 'Could not load daily chart data.';
+        weeklyMeta.textContent = 'Could not load weekly chart data.';
+        dailyChart.innerHTML = '<div style="color:var(--text-dim);font-size:.78rem;padding:12px">No data</div>';
+        weeklyChart.innerHTML = '<div style="color:var(--text-dim);font-size:.78rem;padding:12px">No data</div>';
+        return;
+      }
+
+      if (!o.ok) {
+        dailyMeta.textContent = 'Could not load daily chart data.';
+        weeklyMeta.textContent = 'Could not load weekly chart data.';
+        dailyChart.innerHTML = '<div style="color:var(--text-dim);font-size:.78rem;padding:12px">No data</div>';
+        weeklyChart.innerHTML = '<div style="color:var(--text-dim);font-size:.78rem;padding:12px">No data</div>';
+        return;
+      }
+
+      const daily = o.data.daily || [];
+      const weekly = o.data.weekly || [];
+      renderServerBars('dailySrvChart', 'dailySrvLabels', daily, 'count', 'label');
+
+      const weeklyWithShortLabels = weekly.map((w) => {
+        const date = new Date(`${w.week_start}T00:00:00`);
+        return { ...w, short_label: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) };
+      });
+      renderServerBars('weeklySrvChart', 'weeklySrvLabels', weeklyWithShortLabels, 'count', 'short_label');
+
+      const stats = o.data.stats || {};
+      const dailyCount = Number(stats.daily_checkins) || 0;
+      const avgConf = Math.round((Number(stats.daily_avg_confidence) || 0) * 100);
+      if (dailyCount > 0) {
+        dailyMeta.textContent = `${dailyCount} complete check-ins in the last 7 days. Average confidence: ${avgConf}%.`;
+      } else {
+        dailyMeta.textContent = 'No complete check-ins in the last 7 days yet.';
+      }
+
+      const weeklyCount = weekly.reduce((sum, w) => sum + (Number(w.count) || 0), 0);
+      const fileName = (o.data.saved_weekly_file || '').split(/[\\/]/).pop() || 'weekly_overview.csv';
+      if (weeklyCount > 0) {
+        weeklyMeta.textContent = `${weeklyCount} complete check-ins tracked over ${weekly.length} weeks. Weekly snapshot saved to ${fileName}.`;
+      } else {
+        weeklyMeta.textContent = `No complete weekly trend yet. Weekly snapshot file is ${fileName}.`;
+      }
     }
 
     // PROFILE
@@ -1818,6 +1944,53 @@
       }
     }
 
+    function appendUserChatBubble(msg) {
+      const messages = document.getElementById('chatMessages');
+      if (!messages || !msg) return;
+      messages.insertAdjacentHTML('beforeend', `<div class="chat-bubble user">${escHtml(msg)}</div>`);
+      messages.scrollTop = messages.scrollHeight;
+    }
+
+    function appendAiChatBubble(reply, source, withTyping = true) {
+      const messages = document.getElementById('chatMessages');
+      if (!messages || !reply) return;
+
+      const src = source || 'fallback';
+      const srcTag = src !== 'fallback'
+        ? `<div class="src-tag">✨ via ${escHtml(src)}</div>`
+        : `<div class="src-tag">⚠️ fallback</div>`;
+
+      if (!withTyping) {
+        messages.insertAdjacentHTML(
+          'beforeend',
+          `<div class="chat-bubble ai">${escHtml(reply)}${srcTag}</div>`
+        );
+        messages.scrollTop = messages.scrollHeight;
+        return;
+      }
+
+      const bubble = document.createElement('div');
+      bubble.className = 'chat-bubble ai';
+      messages.appendChild(bubble);
+      let i = 0;
+      const t = setInterval(() => {
+        if (i < reply.length) {
+          bubble.insertAdjacentText('beforeend', reply[i]);
+          i++;
+          messages.scrollTop = messages.scrollHeight;
+        } else {
+          clearInterval(t);
+          bubble.insertAdjacentHTML('beforeend', srcTag);
+        }
+      }, 15);
+    }
+
+    function syncReflectionToChat(reflectionText, companionReply, source) {
+      if (!companionReply) return;
+      appendUserChatBubble(reflectionText);
+      appendAiChatBubble(companionReply, source, false);
+    }
+
     // CHECK-IN
     async function qC(f, el) {
       document.querySelectorAll('.mood-btn').forEach(b => b.classList.remove('sel')); if (el) el.classList.add('sel');
@@ -1835,10 +2008,13 @@
       const o = await api('/predict/text', 'POST', { text: t, save_session: true }); if (!o.ok) { document.getElementById('tRes').textContent = 'Could not save.'; return }
       const emotion = o.data.emotion || 'neutral';
       const emoji = ME[emotion] || '💜';
+      const companionReply = o.data.companion_reply || o.data.llm_response || '';
+      const companionSource = o.data.companion_source || o.data.llm_source || 'fallback';
       addCK('reflection', emotion, t.substring(0, 50));
-      if (o.data.llm_response && o.data.llm_source !== 'none' && o.data.llm_source !== 'error') {
+      syncReflectionToChat(t, companionReply, companionSource);
+      if (companionReply && o.data.llm_source !== 'none' && o.data.llm_source !== 'error') {
         document.getElementById('tRes').innerHTML = `<div style="margin-bottom:8px;font-size:.75rem;color:var(--pink);font-weight:600">MOOD DETECTED: ${emoji} ${emotion.toUpperCase()} · via ${o.data.llm_source}</div>`;
-        typeT('tRes', o.data.llm_response, true);
+        typeT('tRes', companionReply, true);
       } else {
         document.getElementById('tRes').innerHTML = `${emoji} Mood detected: <b>${emotion}</b> — Reflection saved 💜`;
       }
@@ -1890,12 +2066,8 @@
       input.value = '';
       const btn = document.getElementById('chatSendBtn');
       btn.disabled = true;
-
-      // Add user bubble
       const messages = document.getElementById('chatMessages');
-      messages.insertAdjacentHTML('beforeend', `<div class="chat-bubble user">${escHtml(msg)}</div>`);
-
-      // Add typing indicator
+      appendUserChatBubble(msg);
       const typingId = 'typing-' + Date.now();
       messages.insertAdjacentHTML('beforeend', `<div class="chat-typing" id="${typingId}"><span></span><span></span><span></span></div>`);
       messages.scrollTop = messages.scrollHeight;
@@ -1906,18 +2078,8 @@
         if (typing) typing.remove();
 
         if (o.ok) {
-          const src = o.data.llm_source || 'fallback';
-          const srcTag = src !== 'fallback' ? `<div class="src-tag">✨ via ${src}</div>` : `<div class="src-tag">⚠️ fallback</div>`;
-          const bubble = document.createElement('div');
-          bubble.className = 'chat-bubble ai';
-          messages.appendChild(bubble);
-          // Type out the reply
           const reply = o.data.reply || 'I\'m here for you. Take a moment to breathe.';
-          let i = 0;
-          const t = setInterval(() => {
-            if (i < reply.length) { bubble.insertAdjacentText('beforeend', reply[i]); i++; messages.scrollTop = messages.scrollHeight; }
-            else { clearInterval(t); bubble.insertAdjacentHTML('beforeend', srcTag); }
-          }, 15);
+          appendAiChatBubble(reply, o.data.llm_source || 'fallback', true);
         } else {
           messages.insertAdjacentHTML('beforeend', `<div class="chat-bubble ai">Sorry, I couldn't process that right now. Please try again. 💜</div>`);
         }
