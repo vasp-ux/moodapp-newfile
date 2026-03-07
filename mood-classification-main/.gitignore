@@ -1,0 +1,19 @@
+*.npy
+*.h5
+*.csv
+*.log
+*.db
+.env
+venv/
+.venv/
+.vscode/
+__pycache__/
+*.py[cod]
+test.txt
+
+# Large local training datasets
+visual/archive(1)/
+visual/ckplus/
+visual/datasets/
+visual/fer2013/
+text/dataset/
